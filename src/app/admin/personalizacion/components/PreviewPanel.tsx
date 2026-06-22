@@ -1,9 +1,6 @@
 'use client';
 
-interface ConfigItem {
-  clave: string;
-  valor: string;
-}
+import { ConfigItem } from '@/types/config';
 
 interface PreviewPanelProps {
   config: ConfigItem[];

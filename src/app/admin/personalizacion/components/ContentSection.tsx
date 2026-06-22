@@ -1,13 +1,6 @@
 'use client';
 
-interface ConfigItem {
-  clave: string;
-  valor: string;
-  categoria: string;
-  tipo: string;
-  label: string;
-  descripcion?: string;
-}
+import { ConfigItem } from '@/types/config';
 
 interface ContentSectionProps {
   config: ConfigItem[];
