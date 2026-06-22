@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,6 +16,36 @@ export default function Navbar({ onMenuToggle, isMenuOpen, cartCount = 0 }: Navb
   const router = useRouter();
   const { toggleTheme, mode } = useTheme();
   const { user } = useAuth();
+  
+  // ✅ CORREGIDO: Usar useRef en lugar de useState para los clicks
+  const logoClicksRef = useRef(0);
+  const logoClickTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const handleLogoClick = () => {
+    // Incrementar el contador
+    logoClicksRef.current += 1;
+    const currentClicks = logoClicksRef.current;
+
+    // Limpiar timer anterior
+    if (logoClickTimer.current) {
+      clearTimeout(logoClickTimer.current);
+    }
+
+    // Resetear después de 2 segundos
+    logoClickTimer.current = setTimeout(() => {
+      logoClicksRef.current = 0;
+    }, 2000);
+
+    // Si llega a 5 clicks, redirigir
+    if (currentClicks >= 5) {
+      logoClicksRef.current = 0;
+      if (user) {
+        router.push('/admin/productos');
+      } else {
+        router.push('/auth/login');
+      }
+    }
+  };
 
   return (
     <header
@@ -39,14 +70,15 @@ export default function Navbar({ onMenuToggle, isMenuOpen, cartCount = 0 }: Navb
           gap: '16px',
         }}
       >
-        {/* IZQUIERDA: Logo + Nombre */}
+        {/* IZQUIERDA: Logo + Nombre - CON EL HANDLER CORREGIDO */}
         <div
-          onClick={() => router.push('/')}
+          onClick={handleLogoClick}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '12px',
             cursor: 'pointer',
+            userSelect: 'none',
           }}
         >
           <div
@@ -59,7 +91,15 @@ export default function Navbar({ onMenuToggle, isMenuOpen, cartCount = 0 }: Navb
               alignItems: 'center',
               justifyContent: 'center',
               backdropFilter: 'blur(10px)',
+              transition: 'transform 0.2s',
             }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+            title="VoltechStore.ve"
           >
             <span style={{ fontSize: '24px', fontWeight: 'bold', color: 'white' }}>V</span>
           </div>

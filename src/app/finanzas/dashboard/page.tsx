@@ -6,19 +6,9 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
-  FaArrowLeft,
-  FaChartLine,
-  FaArrowUp,
-  FaArrowDown,
-  FaDollarSign,
-  FaExchangeAlt,
-  FaWallet,
-  FaPlus,
-  FaTrash,
-  FaSave,
-  FaBitcoin,
-  FaMoneyBillWave,
-  FaMobileAlt
+  FaArrowLeft, FaChartLine, FaArrowUp, FaArrowDown,
+  FaDollarSign, FaExchangeAlt, FaWallet, FaPlus,
+  FaTrash, FaSave, FaBitcoin, FaMoneyBillWave, FaMobileAlt
 } from 'react-icons/fa';
 
 interface Cuenta {
@@ -105,7 +95,7 @@ export default function Dashboard() {
   const handleGuardarTasa = async () => {
     const nuevaTasa = parseFloat(tasaInput);
     if (!nuevaTasa || nuevaTasa <= 0) {
-      alert('️ Ingresa una tasa válida');
+      alert('⚠️ Ingresa una tasa válida');
       return;
     }
 
@@ -134,7 +124,7 @@ export default function Dashboard() {
 
   const handleCrearCuenta = async () => {
     if (!nuevaCuenta.nombre) {
-      alert('⚠️ El nombre es obligatorio');
+      alert('️ El nombre es obligatorio');
       return;
     }
 
@@ -224,18 +214,15 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: theme.colors.background.primary,
-      color: theme.colors.text.primary,
-      padding: '32px',
-    }}>
+    <div>
       {/* Header */}
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
         marginBottom: '32px',
+        flexWrap: 'wrap',
+        gap: '16px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <button
@@ -275,6 +262,7 @@ export default function Dashboard() {
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
+          flexWrap: 'wrap',
         }}>
           <FaExchangeAlt style={{ color: '#fbbf24', fontSize: '20px' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -426,14 +414,14 @@ export default function Dashboard() {
         <FaChartLine /> Inversiones
       </button>
 
-      {/* Cuentas / Bolsillos (UNIFICADO) */}
+      {/* Cuentas / Bolsillos */}
       <div style={{
         background: theme.colors.background.secondary,
         border: `1px solid ${theme.colors.border.default}`,
         borderRadius: '12px',
         padding: '24px',
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
           <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FaWallet /> Cuentas / Bolsillos
           </h2>
