@@ -1,0 +1,734 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  FaShoppingCart, 
+  FaSearch, 
+  FaFire,
+  FaGift,
+  FaTruck,
+  FaTimes,
+  FaArrowLeft,
+  FaSignOutAlt
+} from 'react-icons/fa';
+
+interface Producto {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  precio_detall: number;
+  precio_oferta?: number;
+  precio_bs?: number;
+  imagen_url: string;
+  categoria: string;
+  marca: string;
+  en_oferta: boolean;
+  stock: number;
+  etiqueta_nuevo?: boolean;
+}
+
+export default function CatalogoPublico() {
+  const router = useRouter();
+  const { theme, toggleTheme, mode } = useTheme();
+  const { user, profile, signOut } = useAuth();
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [filteredProductos, setFilteredProductos] = useState<Producto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busqueda, setBusqueda] = useState('');
+  const [categoriaSelect, setCategoriaSelect] = useState('');
+  const [marcaSelect, setMarcaSelect] = useState('');
+  const [verOfertas, setVerOfertas] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+  const [categorias, setCategorias] = useState<string[]>([]);
+  const [marcas, setMarcas] = useState<string[]>([]);
+  const [productoHover, setProductoHover] = useState<string | null>(null);
+  
+  // 🎯 5 TOQUES EN EL LOGO
+  const [logoClicks, setLogoClicks] = useState(0);
+  const logoClickTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const handleLogoClick = () => {
+    const newCount = logoClicks + 1;
+    setLogoClicks(newCount);
+
+    if (logoClickTimer.current) {
+      clearTimeout(logoClickTimer.current);
+    }
+
+    logoClickTimer.current = setTimeout(() => {
+      setLogoClicks(0);
+    }, 2000);
+
+    if (newCount >= 5) {
+      setLogoClicks(0);
+      if (user) {
+        // Si ya está logueado, va al panel principal
+        router.push('/');
+      } else {
+        // Si no está logueado, va al login
+        router.push('/auth/login');
+      }
+    }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/catalogo');
+  };
+
+  useEffect(() => {
+    fetchProductos();
+  }, []);
+
+  useEffect(() => {
+    filtrarProductos();
+  }, [busqueda, categoriaSelect, marcaSelect, verOfertas, productos]);
+
+  const fetchProductos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('productos')
+        .select('*')
+        .eq('activo', true)
+        .order('nombre', { ascending: true });
+
+      if (error) throw error;
+
+      setProductos(data || []);
+      
+      const cats = [...new Set(data?.map(p => p.categoria).filter(Boolean))].sort();
+      const marcasList = [...new Set(data?.map(p => p.marca).filter(Boolean))].sort();
+      setCategorias(cats);
+      setMarcas(marcasList);
+    } catch (error) {
+      console.error('Error fetching productos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filtrarProductos = () => {
+    let filtrados = [...productos];
+
+    if (busqueda) {
+      filtrados = filtrados.filter(p => 
+        p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+        p.marca?.toLowerCase().includes(busqueda.toLowerCase())
+      );
+    }
+
+    if (categoriaSelect) {
+      filtrados = filtrados.filter(p => p.categoria === categoriaSelect);
+    }
+
+    if (marcaSelect) {
+      filtrados = filtrados.filter(p => p.marca === marcaSelect);
+    }
+
+    if (verOfertas) {
+      filtrados = filtrados.filter(p => p.en_oferta || p.precio_oferta);
+    }
+
+    setFilteredProductos(filtrados);
+  };
+
+  const agregarAlCarrito = (producto: Producto) => {
+    setCartCount(prev => prev + 1);
+  };
+
+  const getProductPrice = (producto: Producto) => {
+    return producto.precio_oferta || producto.precio_detall;
+  };
+
+  const getDiscount = (producto: Producto) => {
+    if (producto.precio_oferta && producto.precio_detall > producto.precio_oferta) {
+      return Math.round(((producto.precio_detall - producto.precio_oferta) / producto.precio_detall) * 100);
+    }
+    return 0;
+  };
+
+  const handleCardMouseEnter = (id: string, e: React.MouseEvent<HTMLDivElement>) => {
+    setProductoHover(id);
+    e.currentTarget.style.transform = 'translateY(-8px)';
+    e.currentTarget.style.boxShadow = '0 12px 32px rgba(0,0,0,0.2)';
+  };
+
+  const handleCardMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+    setProductoHover(null);
+    e.currentTarget.style.transform = 'translateY(0)';
+    e.currentTarget.style.boxShadow = 'none';
+  };
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: theme.colors.background.primary,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: theme.colors.text.primary,
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{
+            width: '60px',
+            height: '60px',
+            border: '4px solid rgba(139, 92, 246, 0.2)',
+            borderTopColor: '#8b5cf6',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 16px',
+          }} />
+          <p>Cargando catálogo...</p>
+        </div>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: theme.colors.background.primary,
+      color: theme.colors.text.primary,
+    }}>
+      {/* Header Superior */}
+      <header style={{
+        background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 50%, #ec4899 100%)',
+        padding: '12px 0',
+        boxShadow: '0 4px 20px rgba(139, 92, 246, 0.3)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+      }}>
+        <div style={{
+          maxWidth: '1400px',
+          margin: '0 auto',
+          padding: '0 20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {/* Botón volver */}
+            <button
+              onClick={() => router.push('/')}
+              style={{
+                width: '40px',
+                height: '40px',
+                background: 'rgba(255,255,255,0.2)',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                backdropFilter: 'blur(10px)',
+                transition: 'all 0.3s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+              }}
+              title="Volver al inicio"
+            >
+              <FaArrowLeft />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {/* 🎯 LOGO CON 5 TOQUES (acceso secreto al login) */}
+              <div
+                onClick={handleLogoClick}
+                style={{
+                  width: '45px',
+                  height: '45px',
+                  background: 'rgba(255,255,255,0.2)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backdropFilter: 'blur(10px)',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  transition: 'transform 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'scale(1.05)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                title="VoltechStore.ve"
+              >
+                <span style={{ fontSize: '24px', fontWeight: 'bold', color: 'white' }}>V</span>
+              </div>
+              <div>
+                <h1 style={{ fontSize: '20px', fontWeight: '700', margin: 0, color: 'white' }}>
+                  VOLTECHSTORE.VE
+                </h1>
+                <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', margin: 0 }}>
+                  Tecnología a tu alcance
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {/* Si está logueado: mostrar info del usuario */}
+            {user && profile ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'white' }}>
+                    {profile.nombre} {profile.apellido}
+                  </p>
+                  <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.8)' }}>
+                    {profile.rol}
+                  </p>
+                </div>
+                {profile.foto_url && (
+                  <img
+                    src={profile.foto_url}
+                    alt={profile.nombre}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '2px solid rgba(255,255,255,0.5)',
+                    }}
+                  />
+                )}
+                <button
+                  onClick={handleSignOut}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    background: 'rgba(239, 68, 68, 0.3)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    color: 'white',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px',
+                  }}
+                  title="Cerrar sesión"
+                >
+                  <FaSignOutAlt />
+                </button>
+              </div>
+            ) : null}
+
+            <button
+              onClick={toggleTheme}
+              style={{
+                width: '45px',
+                height: '45px',
+                background: 'rgba(255,255,255,0.2)',
+                border: 'none',
+                borderRadius: '50%',
+                color: 'white',
+                fontSize: '18px',
+                cursor: 'pointer',
+                backdropFilter: 'blur(10px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.3s',
+              }}
+            >
+              {mode === 'dark' ? '☀️' : '🌙'}
+            </button>
+
+            <button style={{
+              background: 'rgba(255,255,255,0.2)',
+              border: 'none',
+              padding: '10px 20px',
+              borderRadius: '25px',
+              color: 'white',
+              fontWeight: '600',
+              fontSize: '13px',
+              cursor: 'pointer',
+              backdropFilter: 'blur(10px)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}>
+              <FaGift /> SORTEO
+            </button>
+            
+            <div style={{
+              position: 'relative',
+              width: '50px',
+              height: '50px',
+              background: 'rgba(255,255,255,0.2)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              backdropFilter: 'blur(10px)',
+            }}>
+              <FaShoppingCart style={{ fontSize: '20px', color: 'white' }} />
+              {cartCount > 0 && (
+                <span style={{
+                  position: 'absolute',
+                  top: '-5px',
+                  right: '-5px',
+                  background: '#ef4444',
+                  color: 'white',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '2px solid #7c3aed',
+                }}>
+                  {cartCount}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Banner de Delivery */}
+      <div style={{
+        background: 'linear-gradient(90deg, #a855f7 0%, #ec4899 100%)',
+        padding: '10px',
+        textAlign: 'center',
+        color: 'white',
+        fontWeight: '600',
+        fontSize: '14px',
+      }}>
+        <FaTruck style={{ marginRight: '8px' }} />
+        DELIVERY GRATIS después de $20
+      </div>
+
+      {/* Contenido Principal */}
+      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 20px' }}>
+        <div style={{ marginBottom: '32px' }}>
+          <div style={{
+            position: 'relative',
+            maxWidth: '800px',
+            margin: '0 auto 20px',
+          }}>
+            <FaSearch style={{
+              position: 'absolute',
+              left: '20px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: theme.colors.text.secondary,
+              fontSize: '18px',
+            }} />
+            <input
+              type="text"
+              placeholder="Buscar productos..."
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '16px 20px 16px 55px',
+                background: theme.colors.background.tertiary,
+                border: `1px solid ${theme.colors.border.default}`,
+                borderRadius: '12px',
+                color: theme.colors.text.primary,
+                fontSize: '15px',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr auto',
+            gap: '12px',
+            maxWidth: '800px',
+            margin: '0 auto',
+          }}>
+            <select
+              value={categoriaSelect}
+              onChange={(e) => setCategoriaSelect(e.target.value)}
+              style={{
+                padding: '12px 16px',
+                background: theme.colors.background.tertiary,
+                border: `1px solid ${theme.colors.border.default}`,
+                borderRadius: '10px',
+                color: theme.colors.text.primary,
+                fontSize: '14px',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="">Todas las categorías</option>
+              {categorias.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+
+            <select
+              value={marcaSelect}
+              onChange={(e) => setMarcaSelect(e.target.value)}
+              style={{
+                padding: '12px 16px',
+                background: theme.colors.background.tertiary,
+                border: `1px solid ${theme.colors.border.default}`,
+                borderRadius: '10px',
+                color: theme.colors.text.primary,
+                fontSize: '14px',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="">Todas las marcas</option>
+              {marcas.map(marca => (
+                <option key={marca} value={marca}>{marca}</option>
+              ))}
+            </select>
+
+            <button
+              onClick={() => setVerOfertas(!verOfertas)}
+              style={{
+                padding: '12px 24px',
+                background: verOfertas 
+                  ? 'linear-gradient(135deg, #ef4444, #dc2626)'
+                  : 'linear-gradient(135deg, #f59e0b, #d97706)',
+                border: 'none',
+                borderRadius: '10px',
+                color: 'white',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <FaFire /> {verOfertas ? 'Ver Todo' : 'Ver Ofertas'}
+            </button>
+          </div>
+        </div>
+
+        <section>
+          <h2 style={{
+            fontSize: '28px',
+            fontWeight: '700',
+            marginBottom: '24px',
+          }}>
+            {verOfertas ? 'Productos en Oferta' : 'Todos los Productos'}
+            <span style={{
+              fontSize: '16px',
+              color: theme.colors.text.secondary,
+              fontWeight: '400',
+              marginLeft: '12px',
+            }}>
+              ({filteredProductos.length})
+            </span>
+          </h2>
+
+          {filteredProductos.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '80px 20px',
+              color: theme.colors.text.secondary,
+            }}>
+              <div style={{ fontSize: '64px', marginBottom: '16px' }}>🔍</div>
+              <h3 style={{ fontSize: '20px', marginBottom: '8px' }}>No se encontraron productos</h3>
+              <p>Intenta con otros filtros o términos de búsqueda</p>
+            </div>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '24px',
+            }}>
+              {filteredProductos.map(producto => (
+                <div
+                  key={producto.id}
+                  style={{
+                    background: theme.colors.background.tertiary,
+                    border: `1px solid ${theme.colors.border.default}`,
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    transition: 'all 0.3s',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => handleCardMouseEnter(producto.id, e)}
+                  onMouseLeave={(e) => handleCardMouseLeave(e)}
+                >
+                  <div style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    zIndex: 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '6px',
+                  }}>
+                    {producto.etiqueta_nuevo && (
+                      <span style={{
+                        background: '#22c55e',
+                        color: 'white',
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                      }}>
+                        Nuevo
+                      </span>
+                    )}
+                    {(producto.en_oferta || producto.precio_oferta) && (
+                      <span style={{
+                        background: '#f59e0b',
+                        color: 'white',
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                      }}>
+                        Oferta
+                      </span>
+                    )}
+                    {producto.stock === 0 && (
+                      <span style={{
+                        background: '#ef4444',
+                        color: 'white',
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                      }}>
+                        Agotado
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{
+                    position: 'relative',
+                    height: '250px',
+                    background: theme.colors.background.secondary,
+                    overflow: 'hidden',
+                  }}>
+                    <img
+                      src={producto.imagen_url}
+                      alt={producto.nombre}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        transition: 'transform 0.3s',
+                        transform: productoHover === producto.id ? 'scale(1.1)' : 'scale(1)',
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ padding: '20px' }}>
+                    <div style={{ fontSize: '11px', color: '#8b5cf6', fontWeight: '600', marginBottom: '6px', textTransform: 'uppercase' }}>
+                      {producto.categoria}
+                    </div>
+                    <h3 style={{
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      margin: '0 0 6px 0',
+                      color: theme.colors.text.primary,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {producto.nombre}
+                    </h3>
+                    <p style={{ fontSize: '12px', color: theme.colors.text.secondary, margin: '0 0 12px 0' }}>
+                      {producto.marca}
+                    </p>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                      <span style={{
+                        fontSize: '22px',
+                        fontWeight: '700',
+                        color: '#22c55e',
+                      }}>
+                        ${getProductPrice(producto).toFixed(2)}
+                      </span>
+                      {producto.precio_oferta && producto.precio_detall > producto.precio_oferta && (
+                        <>
+                          <span style={{
+                            fontSize: '13px',
+                            color: theme.colors.text.muted,
+                            textDecoration: 'line-through',
+                          }}>
+                            ${producto.precio_detall.toFixed(2)}
+                          </span>
+                          <span style={{
+                            fontSize: '11px',
+                            color: '#ef4444',
+                            fontWeight: '600',
+                          }}>
+                            -{getDiscount(producto)}%
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => agregarAlCarrito(producto)}
+                      disabled={producto.stock === 0}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        background: producto.stock === 0
+                          ? theme.colors.background.elevated
+                          : 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: producto.stock === 0 ? theme.colors.text.muted : 'white',
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        cursor: producto.stock === 0 ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                      }}
+                    >
+                      {producto.stock === 0 ? (
+                        <>
+                          <FaTimes /> Agotado
+                        </>
+                      ) : (
+                        <>
+                          <FaShoppingCart /> Agregar
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
+
+      <footer style={{
+        background: theme.colors.background.secondary,
+        borderTop: `1px solid ${theme.colors.border.default}`,
+        padding: '32px 20px',
+        textAlign: 'center',
+        color: theme.colors.text.secondary,
+        fontSize: '13px',
+        marginTop: '64px',
+      }}>
+        <p style={{ margin: 0 }}>© 2026 VoltechStore.ve - Todos los derechos reservados</p>
+      </footer>
+    </div>
+  );
+}
