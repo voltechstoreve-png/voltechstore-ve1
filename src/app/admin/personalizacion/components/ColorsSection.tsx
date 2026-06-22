@@ -1,13 +1,7 @@
 'use client';
 
 import { useTheme } from '@/contexts/ThemeContext';
-
-interface ConfigItem {
-  clave: string;
-  valor: string;
-  label: string;
-  descripcion?: string;
-}
+import { ConfigItem } from '@/types/config';
 
 interface ColorsSectionProps {
   config: ConfigItem[];

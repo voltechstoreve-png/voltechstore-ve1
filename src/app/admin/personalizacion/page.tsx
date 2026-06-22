@@ -11,15 +11,7 @@ import ContentSection from './components/ContentSection';
 import TypographySection from './components/TypographySection';
 import PreviewPanel from './components/PreviewPanel';
 import { FaArrowLeft } from 'react-icons/fa';
-
-interface ConfigItem {
-  clave: string;
-  valor: string;
-  categoria: string;
-  tipo: string;
-  label: string;
-  descripcion?: string;
-}
+import { ConfigItem } from '@/types/config';  
 
 export default function PersonalizacionPage() {
   const router = useRouter();
