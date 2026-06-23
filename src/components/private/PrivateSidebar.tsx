@@ -8,7 +8,8 @@ import {
   FaHome, FaBox, FaUsers, FaUserTie, FaStar, FaGift,
   FaChartLine, FaShoppingCart, FaTruck, FaExchangeAlt,
   FaPalette, FaCog, FaClipboardList, FaTv,
-  FaChevronDown, FaUserShield, FaWallet, FaStore, FaBars
+  FaChevronDown, FaUserShield, FaWallet, FaStore, FaBars,
+  FaBullhorn, FaWhatsapp, FaInstagram, FaTelegram
 } from 'react-icons/fa';
 
 interface SubMenuItem {
@@ -42,6 +43,16 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
+    id: 'marketing',
+    title: 'Marketing',
+    icon: FaBullhorn,
+    items: [
+      { icon: FaWhatsapp, label: 'Difusión WhatsApp', path: '/marketing/difusion', description: 'Envíos masivos seguros' },
+      { icon: FaInstagram, label: 'Generador de Copys', path: '/marketing/copys', description: 'Textos para redes' },
+      { icon: FaTelegram, label: 'Bot Telegram', path: '/marketing/telegram', description: 'Alertas automáticas' },
+    ],
+  },
+  {
     id: 'finanzas',
     title: 'Panel de Finanzas',
     icon: FaWallet,
@@ -65,10 +76,16 @@ export default function PrivateSidebar() {
 
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
     admin: true,
+    marketing: false,
     finanzas: false,
   });
 
-  const activeSection = pathname.startsWith('/finanzas') ? 'finanzas' : 'admin';
+  // Detectar sección activa según la ruta
+  const activeSection = pathname.startsWith('/finanzas')
+    ? 'finanzas'
+    : pathname.startsWith('/marketing')
+    ? 'marketing'
+    : 'admin';
 
   useEffect(() => {
     setExpandedMenus(prev => ({
@@ -79,7 +96,7 @@ export default function PrivateSidebar() {
 
   useEffect(() => {
     if (isCollapsed) {
-      setExpandedMenus({ admin: false, finanzas: false });
+      setExpandedMenus({ admin: false, marketing: false, finanzas: false });
     }
   }, [isCollapsed]);
 
@@ -340,7 +357,6 @@ export default function PrivateSidebar() {
             flexDirection: 'column',
           }}
         >
-          {/* Botón Hamburguesa */}
           <button
             onClick={toggleSidebar}
             style={{
@@ -371,7 +387,6 @@ export default function PrivateSidebar() {
             <span>Contraer menú</span>
           </button>
 
-          {/* Menús */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {menuSections.map(section => (
               <div key={section.id}>
@@ -381,7 +396,6 @@ export default function PrivateSidebar() {
             ))}
           </div>
 
-          {/* Botón Volver a Tienda */}
           <div
             style={{
               paddingTop: '16px',
@@ -442,16 +456,15 @@ export default function PrivateSidebar() {
         flexDirection: 'column',
       }}
     >
-      {/* Botón Hamburguesa */}
       <button
         onClick={toggleSidebar}
         style={{
           width: '100%',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: isCollapsed ? 'center' : 'center',
+          justifyContent: 'center',
           gap: '10px',
-          padding: isCollapsed ? '12px' : '12px',
+          padding: '12px',
           background: 'rgba(168, 85, 247, 0.15)',
           border: '1px solid rgba(168, 85, 247, 0.3)',
           borderRadius: '10px',
@@ -474,7 +487,6 @@ export default function PrivateSidebar() {
         {!isCollapsed && <span>Contraer menú</span>}
       </button>
 
-      {/* Menús desplegables */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {menuSections.map(section => (
           <div key={section.id}>
@@ -484,7 +496,6 @@ export default function PrivateSidebar() {
         ))}
       </div>
 
-      {/* Botón Volver a Tienda */}
       <div
         style={{
           paddingTop: '16px',
