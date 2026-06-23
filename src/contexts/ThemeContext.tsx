@@ -33,8 +33,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setMode(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  const value = {
-    theme: themes[mode],
+  const value: ThemeContextType = {
+    theme: themes[mode] as Theme,
     mode,
     toggleTheme,
     setMode,
